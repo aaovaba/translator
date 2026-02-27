@@ -1,28 +1,14 @@
-import tempfile
-import os
 from fastapi import WebSocket, APIRouter, WebSocketDisconnect
 from openai import OpenAI
 from app.config import OPENAI_API_KEY
-from app.services.translator import detect_language, translate
+from app.services.ai import (
+    transcribe_audio,
+    detect_language,
+    generate_tts_audio,
+)
 
-client = OpenAI(api_key=OPENAI_API_KEY)
 router = APIRouter()
-
-
-async def transcribe_audio(audio_bytes):
-    with tempfile.NamedTemporaryFile(delete=False, suffix=".webm") as tmp:
-        tmp.write(audio_bytes)
-        tmp_path = tmp.name
-
-    try:
-        with open(tmp_path, "rb") as audio_file:
-            transcript = client.audio.transcriptions.create(
-                model="gpt-4o-mini-transcribe",
-                file=audio_file
-            )
-        return transcript.text
-    finally:
-        os.remove(tmp_path)
+client = OpenAI(api_key=OPENAI_API_KEY)
 
 
 @router.websocket("/ws")
@@ -30,86 +16,152 @@ async def websocket_endpoint(websocket: WebSocket):
     await websocket.accept()
     print("WebSocket connected")
 
+    patient_language = None
+    transcript_log = []
+
     try:
-        # ---------------- CONSENT STAGE ----------------
+        # ---------------- CONSENT ----------------
+
         audio_bytes = await websocket.receive_bytes()
         first_text = await transcribe_audio(audio_bytes)
-        print("First speech:", first_text)
 
         patient_language = detect_language(first_text)
-        print("Detected language:", patient_language)
 
-        consent_message = translate(
-            "This system uses artificial intelligence to translate your conversation with the doctor. Do you consent to using this translator?",
-            patient_language
+        print("First speech:", first_text)
+        print("Detected patient language:", patient_language)
+
+        consent_message = (
+            "This system uses artificial intelligence to translate "
+            "your conversation with the doctor. Do you consent?"
         )
+
+        consent_translation = client.chat.completions.create(
+            model="gpt-4o-mini",
+            temperature=0,
+            messages=[
+                {"role": "system", "content": "Translate accurately."},
+                {"role": "user", "content": f"Translate to {patient_language}: {consent_message}"}
+            ]
+        ).choices[0].message.content.strip()
+
+        consent_audio = generate_tts_audio(consent_translation)
 
         await websocket.send_json({
             "type": "consent",
-            "text": consent_message
+            "text": consent_translation,
+            "audio": consent_audio
         })
+
+        # -------- CONSENT RESPONSE --------
 
         audio_bytes = await websocket.receive_bytes()
         consent_text = await transcribe_audio(audio_bytes)
 
         classification = client.chat.completions.create(
             model="gpt-4o-mini",
+            temperature=0,
             messages=[
                 {
                     "role": "system",
-                    "content": "Return only YES or NO. Does this sentence clearly express consent?"
+                    "content": "Answer ONLY YES or NO. Does this express agreement?"
                 },
-                {
-                    "role": "user",
-                    "content": consent_text
-                }
+                {"role": "user", "content": consent_text}
             ]
         )
 
         decision = classification.choices[0].message.content.strip().upper()
 
+        print("Consent classification:", decision)
+
         if not decision.startswith("YES"):
             await websocket.send_json({
                 "type": "status",
-                "text": "Consent denied."
+                "text": "Consent denied"
             })
+            await websocket.close()
             return
 
         await websocket.send_json({
             "type": "status",
-            "text": "Consent granted."
+            "text": "Consent granted"
         })
 
         # ---------------- TRANSLATION LOOP ----------------
+
         while True:
-            message = await websocket.receive_json()
+            message = await websocket.receive()
 
-            speaker = message.get("speaker")
-            audio_bytes = message.get("audio")
+            if "text" in message and message["text"] == "end_session":
 
-            if not audio_bytes:
-                continue
+                summary_prompt = "\n".join(transcript_log)
 
-            spoken_text = await transcribe_audio(
-                bytes(audio_bytes)
-            )
+                summary = client.chat.completions.create(
+                    model="gpt-4o-mini",
+                    temperature=0,
+                    messages=[
+                        {
+                            "role": "system",
+                            "content": "Summarize this medical consultation in bullet points."
+                        },
+                        {"role": "user", "content": summary_prompt}
+                    ]
+                ).choices[0].message.content.strip()
+
+                await websocket.send_json({
+                    "type": "summary",
+                    "text": summary
+                })
+
+                await websocket.close()
+                break
+
+            # -------- NORMAL SPEECH --------
+
+            audio_bytes = message["bytes"]
+            spoken_text = await transcribe_audio(audio_bytes)
+
+            detected_language = detect_language(spoken_text)
 
             print("Spoken:", spoken_text)
+            print("Detected speech language:", detected_language)
 
-            if speaker == "patient":
-                translated = translate(spoken_text, "English")
-                output_speaker = "patient"
+            # 🔥 FIXED SPEAKER LOGIC
+            # If English → doctor
+            # Otherwise → patient
 
+            if detected_language.lower() == "english":
+                speaker = "doctor"
+                target_language = patient_language
             else:
-                translated = translate(spoken_text, patient_language)
-                output_speaker = "doctor"
+                speaker = "patient"
+                target_language = "English"
+
+            translation = client.chat.completions.create(
+                model="gpt-4o-mini",
+                temperature=0,
+                messages=[
+                    {"role": "system", "content": "Translate ONLY the sentence."},
+                    {"role": "user", "content": f"Translate to {target_language}: {spoken_text}"}
+                ]
+            ).choices[0].message.content.strip()
+
+            print("Translated:", translation)
+
+            transcript_log.append(f"{speaker.upper()}: {spoken_text}")
+
+            tts_audio = generate_tts_audio(translation)
 
             await websocket.send_json({
                 "type": "translation",
-                "speaker": output_speaker,
+                "speaker": speaker,
                 "original": spoken_text,
-                "translated": translated
+                "translated": translation,
+                "audio": tts_audio
             })
 
     except WebSocketDisconnect:
         print("WebSocket disconnected")
+
+    except Exception as e:
+        print("Server error:", str(e))
+        await websocket.close()

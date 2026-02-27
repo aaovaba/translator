@@ -1,33 +1,65 @@
-import React, { useState, useRef } from "react";
+import React, { useState, useEffect } from "react";
 import ConsentPage from "./pages/ConsentPage";
 import TranslationPage from "./pages/TranslationPage";
-import { connectWebSocket } from "./services/websocket";
+import ThankYouPage from "./pages/ThankYouPage";
 
 function App() {
-  const [stage, setStage] = useState("consent");
-  const socketRef = useRef(null);
+  const [socket, setSocket] = useState(null);
+  const [page, setPage] = useState("consent"); // consent | translation | thankyou
+  const [summary, setSummary] = useState("");
 
-  if (!socketRef.current) {
-    socketRef.current = connectWebSocket(() => {});
+  useEffect(() => {
+    const ws = new WebSocket("ws://localhost:8000/ws");
+
+    ws.onopen = () => {
+      console.log("Connected to backend");
+    };
+
+    ws.onclose = () => {
+      console.log("Disconnected from backend");
+    };
+
+    setSocket(ws);
+
+    return () => {
+      ws.close();
+    };
+  }, []);
+
+  const handleConsentGranted = () => {
+    setPage("translation");
+  };
+
+  const handleSessionEnd = (sessionSummary) => {
+    setSummary(sessionSummary);
+    setPage("thankyou");
+  };
+
+  if (!socket) return <div>Connecting...</div>;
+
+  if (page === "consent") {
+    return (
+      <ConsentPage
+        socket={socket}
+        onConsentGranted={handleConsentGranted}
+      />
+    );
   }
 
-  return (
-    <>
-      {stage === "consent" && (
-        <ConsentPage
-          socket={socketRef.current}
-          onConsentGranted={() => setStage("translation")}
-        />
-      )}
+  if (page === "translation") {
+    return (
+      <TranslationPage
+        socket={socket}
+        onSessionEnd={handleSessionEnd}
+      />
+    );
+  }
 
-      {stage === "translation" && (
-        <TranslationPage
-          socket={socketRef.current}
-          onEnd={() => setStage("consent")}
-        />
-      )}
-    </>
-  );
+  if (page === "thankyou") {
+    return <ThankYouPage summary={summary} />;
+  }
+
+  return null;
 }
 
 export default App;

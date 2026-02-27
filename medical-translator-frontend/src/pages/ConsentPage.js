@@ -1,5 +1,5 @@
-import React, { useEffect, useState, useRef } from "react";
-import "./ConsentPage.css";
+import React, { useEffect, useRef, useState } from "react";
+
 export default function ConsentPage({ socket, onConsentGranted }) {
   const [consentText, setConsentText] = useState("");
   const mediaRecorderRef = useRef(null);
@@ -13,42 +13,25 @@ export default function ConsentPage({ socket, onConsentGranted }) {
 
       if (data.type === "consent") {
         setConsentText(data.text);
-        speakText(data.text);
+        playAudio(data.audio);
       }
 
       if (data.type === "status") {
-        if (data.text === "Consent granted.") {
+        const status = data.text.toLowerCase();
+
+        if (status.includes("granted")) {
           onConsentGranted();
-        } else {
+        } else if (status.includes("denied")) {
           alert("Consent denied.");
         }
       }
     };
   }, [socket, onConsentGranted]);
 
-  useEffect(() => {
-    window.speechSynthesis.onvoiceschanged = () => {
-      window.speechSynthesis.getVoices();
-    };
-  }, []);
-
-  const speakText = (text) => {
-    if (!text) return;
-
-    const synth = window.speechSynthesis;
-    synth.cancel();
-
-    const utterance = new SpeechSynthesisUtterance(text);
-
-    const voices = synth.getVoices();
-    if (voices.length > 0) {
-      utterance.voice = voices[0];
-    }
-
-    utterance.rate = 1;
-    utterance.pitch = 1;
-
-    synth.speak(utterance);
+  const playAudio = (base64Audio) => {
+    if (!base64Audio) return;
+    const audio = new Audio("data:audio/mp3;base64," + base64Audio);
+    audio.play();
   };
 
   const startRecording = async () => {
@@ -63,6 +46,8 @@ export default function ConsentPage({ socket, onConsentGranted }) {
       mimeType: "audio/webm"
     });
 
+    mediaRecorderRef.current = mediaRecorder;
+
     let audioChunks = [];
 
     mediaRecorder.ondataavailable = (event) => {
@@ -74,7 +59,6 @@ export default function ConsentPage({ socket, onConsentGranted }) {
     mediaRecorder.onstop = async () => {
       const blob = new Blob(audioChunks, { type: "audio/webm" });
       const arrayBuffer = await blob.arrayBuffer();
-
       socket.send(arrayBuffer);
       audioChunks = [];
     };
@@ -83,86 +67,43 @@ export default function ConsentPage({ socket, onConsentGranted }) {
 
     setTimeout(() => {
       mediaRecorder.stop();
-    }, 6000);
-
-    mediaRecorderRef.current = mediaRecorder;
+    }, 4000);
   };
 
-//   return (
-//     <div style={{ padding: "50px", textAlign: "center" }}>
-//       <h2>Patient Consent</h2>
-
-//       {!consentText && (
-//         <button
-//           onClick={startRecording}
-//           style={{ padding: "15px 40px", fontSize: "18px" }}
-//         >
-//           🎙 Speak to Start
-//         </button>
-//       )}
-
-//       {consentText && (
-//         <div style={{ marginTop: "30px" }}>
-//           <p style={{ fontSize: "22px" }}>{consentText}</p>
-
-//           <div style={{ marginTop: "20px" }}>
-//             <button
-//               onClick={() => speakText(consentText)}
-//               style={{ padding: "10px 30px", marginRight: "20px" }}
-//             >
-//               🔊 Play Consent
-//             </button>
-
-//             <button
-//               onClick={startRecording}
-//               style={{ padding: "15px 40px", fontSize: "18px" }}
-//             >
-//               🎙 Speak Your Answer
-//             </button>
-//           </div>
-//         </div>
-//       )}
-//     </div>
-//   );
-return (
-  <div className="consent-container">
-    <div className="consent-card">
-      <div className="consent-header">The system will identify the patient's language and record the consent. Press the button below and ask the patient to speak.
-      </div>
-                
+  return (
+    <div style={{ padding: "50px", textAlign: "center" }}>
+      <h2>Patient Consent</h2>
 
       {!consentText && (
         <button
           onClick={startRecording}
-          className="btn btn-primary"
+          style={{ padding: "15px 40px", fontSize: "18px" }}
         >
-          🎙 Press Here!
+          🎙 Record Patient Speech
         </button>
       )}
 
       {consentText && (
-        <>
-          <div className="consent-text">{consentText}</div>
+        <div style={{ marginTop: "30px" }}>
+          <p style={{ fontSize: "20px" }}>{consentText}</p>
 
-          <div className="button-group">
+          <div style={{ marginTop: "20px" }}>
             <button
-              onClick={() => speakText(consentText)}
-              className="btn btn-secondary"
+              onClick={() => playAudio()}
+              style={{ padding: "10px 30px", marginRight: "20px" }}
             >
               🔊 Play Consent
             </button>
 
             <button
               onClick={startRecording}
-              className="btn btn-primary"
+              style={{ padding: "15px 40px", fontSize: "18px" }}
             >
-              🎙 Record Your Answer
+              🎙 Record Answer
             </button>
           </div>
-        </>
+        </div>
       )}
     </div>
-  </div>
-);
-
+  );
 }

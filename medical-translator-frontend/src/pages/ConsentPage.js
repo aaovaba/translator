@@ -1,5 +1,5 @@
 import React, { useEffect, useState, useRef } from "react";
-
+import "./ConsentPage.css";
 export default function ConsentPage({ socket, onConsentGranted }) {
   const [consentText, setConsentText] = useState("");
   const mediaRecorderRef = useRef(null);
@@ -88,40 +88,81 @@ export default function ConsentPage({ socket, onConsentGranted }) {
     mediaRecorderRef.current = mediaRecorder;
   };
 
-  return (
-    <div style={{ padding: "50px", textAlign: "center" }}>
-      <h2>Patient Consent</h2>
+//   return (
+//     <div style={{ padding: "50px", textAlign: "center" }}>
+//       <h2>Patient Consent</h2>
+
+//       {!consentText && (
+//         <button
+//           onClick={startRecording}
+//           style={{ padding: "15px 40px", fontSize: "18px" }}
+//         >
+//           🎙 Speak to Start
+//         </button>
+//       )}
+
+//       {consentText && (
+//         <div style={{ marginTop: "30px" }}>
+//           <p style={{ fontSize: "22px" }}>{consentText}</p>
+
+//           <div style={{ marginTop: "20px" }}>
+//             <button
+//               onClick={() => speakText(consentText)}
+//               style={{ padding: "10px 30px", marginRight: "20px" }}
+//             >
+//               🔊 Play Consent
+//             </button>
+
+//             <button
+//               onClick={startRecording}
+//               style={{ padding: "15px 40px", fontSize: "18px" }}
+//             >
+//               🎙 Speak Your Answer
+//             </button>
+//           </div>
+//         </div>
+//       )}
+//     </div>
+//   );
+return (
+  <div className="consent-container">
+    <div className="consent-card">
+      <div className="consent-header">The system will identify the patient's language and record the consent. Press the button below and ask the patient to speak.
+      </div>
+                
 
       {!consentText && (
         <button
           onClick={startRecording}
-          style={{ padding: "15px 40px", fontSize: "18px" }}
+          className="btn btn-primary"
         >
-          🎙 Speak to Start
+          🎙 Press Here!
         </button>
       )}
 
       {consentText && (
-        <div style={{ marginTop: "30px" }}>
-          <p style={{ fontSize: "22px" }}>{consentText}</p>
+        <>
+          <div className="consent-text">{consentText}</div>
 
-          <div style={{ marginTop: "20px" }}>
+          <div className="button-group">
             <button
               onClick={() => speakText(consentText)}
-              style={{ padding: "10px 30px", marginRight: "20px" }}
+              className="btn btn-secondary"
             >
               🔊 Play Consent
             </button>
 
             <button
               onClick={startRecording}
-              style={{ padding: "15px 40px", fontSize: "18px" }}
+              className="btn btn-primary"
             >
-              🎙 Speak Your Answer
+              🎙 Record Your Answer
             </button>
           </div>
-        </div>
+        </>
       )}
     </div>
-  );
+  </div>
+);
+
 }

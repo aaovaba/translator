@@ -1,5 +1,5 @@
 import React, { useEffect, useRef, useState } from "react";
-
+import "./TranslationPage.css";
 export default function TranslationPage({ socket, onEnd }) {
   const [messages, setMessages] = useState([]);
   const [speaker, setSpeaker] = useState("patient");
@@ -171,43 +171,89 @@ export default function TranslationPage({ socket, onEnd }) {
     }, 6000);
   };
 
-  return (
-    <div style={{ padding: "40px" }}>
-      <h2 style={{ textAlign: "center" }}>Live Translation</h2>
+//   return (
+//     <div style={{ padding: "40px" }}>
+//       <h2 style={{ textAlign: "center" }}>Doctoria's Live Translation Agent</h2>
 
-      <div
-        style={{
-          height: "60vh",
-          overflowY: "auto",
-          border: "1px solid #ccc",
-          padding: "20px",
-          borderRadius: "10px",
-          backgroundColor: "#f9f9f9"
-        }}
-      >
+//       <div
+//         style={{
+//           height: "60vh",
+//           overflowY: "auto",
+//           border: "1px solid #ccc",
+//           padding: "20px",
+//           borderRadius: "10px",
+//           backgroundColor: "#f9f9f9"
+//         }}
+//       >
+//         {messages.map((msg, index) => (
+//           <div
+//             key={index}
+//             style={{
+//               display: "flex",
+//               justifyContent:
+//                 msg.speaker === "patient"
+//                   ? "flex-end"
+//                   : "flex-start",
+//               marginBottom: "10px"
+//             }}
+//           >
+//             <div
+//               style={{
+//                 background:
+//                   msg.speaker === "patient"
+//                     ? "#d1f5d3"
+//                     : "#e0e0e0",
+//                 padding: "10px 15px",
+//                 borderRadius: "15px",
+//                 maxWidth: "60%",
+//                 fontSize: "16px"
+//               }}
+//             >
+//               {msg.text}
+//             </div>
+//           </div>
+//         ))}
+//       </div>
+
+//       <div style={{ textAlign: "center", marginTop: "20px" }}>
+//         <select
+//           value={speaker}
+//           onChange={(e) => setSpeaker(e.target.value)}
+//           style={{ marginRight: "20px", padding: "10px" }}
+//         >
+//           <option value="patient">Patient Speaking</option>
+//           <option value="doctor">Doctor Speaking</option>
+//         </select>
+
+//         <button
+//           onClick={startRecording}
+//           style={{ padding: "15px 40px", fontSize: "18px" }}
+//         >
+//           🎙 Speak
+//         </button>
+//       </div>
+
+//       <div style={{ textAlign: "center", marginTop: "20px" }}>
+//         <button onClick={onEnd}>End Session</button>
+//       </div>
+//     </div>
+//   );
+
+return (
+  <div className="translation-container">
+    <div className="translation-card">
+      <div className="translation-header">
+        Doctoria's Live Translation and Interpretation Platform
+      </div>
+
+      <div className="chat-box">
         {messages.map((msg, index) => (
           <div
             key={index}
-            style={{
-              display: "flex",
-              justifyContent:
-                msg.speaker === "patient"
-                  ? "flex-end"
-                  : "flex-start",
-              marginBottom: "10px"
-            }}
+            className={`message-row ${msg.speaker}`}
           >
             <div
-              style={{
-                background:
-                  msg.speaker === "patient"
-                    ? "#d1f5d3"
-                    : "#e0e0e0",
-                padding: "10px 15px",
-                borderRadius: "15px",
-                maxWidth: "60%",
-                fontSize: "16px"
-              }}
+              className={`message-bubble ${msg.speaker}`}
             >
               {msg.text}
             </div>
@@ -215,11 +261,11 @@ export default function TranslationPage({ socket, onEnd }) {
         ))}
       </div>
 
-      <div style={{ textAlign: "center", marginTop: "20px" }}>
+      <div className="controls">
         <select
           value={speaker}
           onChange={(e) => setSpeaker(e.target.value)}
-          style={{ marginRight: "20px", padding: "10px" }}
+          className="speaker-select"
         >
           <option value="patient">Patient Speaking</option>
           <option value="doctor">Doctor Speaking</option>
@@ -227,15 +273,26 @@ export default function TranslationPage({ socket, onEnd }) {
 
         <button
           onClick={startRecording}
-          style={{ padding: "15px 40px", fontSize: "18px" }}
+          className="speak-button"
         >
           🎙 Speak
         </button>
       </div>
 
-      <div style={{ textAlign: "center", marginTop: "20px" }}>
-        <button onClick={onEnd}>End Session</button>
+      <div style={{ textAlign: "center" }}>
+        <button onClick={onEnd} className="end-button">
+          End Session
+        </button>
+        <p>Terms and Conditions Apply</p>
+        <p>Copyright © 2026 Doctoria. All rights reserved.</p>
       </div>
     </div>
-  );
+  </div>
+);
 }
+
+
+// summarise at the end and have an option to send it somewhere
+// display the detected language in the UI
+// the consent should be bilingual
+// write the text in both languages in the UI (original and translated) but speak only translated text

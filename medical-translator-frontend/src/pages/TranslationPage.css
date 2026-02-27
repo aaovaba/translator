@@ -1,0 +1,135 @@
+/* Page Container */
+.translation-container {
+  min-height: 100vh;
+  background: linear-gradient(135deg, #1e3c72, #2a5298);
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  padding: 40px;
+  font-family: "Segoe UI", sans-serif;
+}
+
+/* Card */
+.translation-card {
+  width: 900px;
+  background: white;
+  border-radius: 20px;
+  box-shadow: 0 20px 40px rgba(0, 0, 0, 0.2);
+  padding: 30px;
+  display: flex;
+  flex-direction: column;
+}
+
+/* Header */
+.translation-header {
+  text-align: center;
+  font-size: 28px;
+  font-weight: 600;
+  margin-bottom: 20px;
+  color: #2a5298;
+}
+
+/* Chat Box */
+.chat-box {
+  height: 60vh;
+  overflow-y: auto;
+  border-radius: 15px;
+  padding: 20px;
+  background: #f4f7fb;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+/* Message Wrapper */
+.message-row {
+  display: flex;
+}
+
+.message-row.patient {
+  justify-content: flex-end;
+}
+
+.message-row.doctor {
+  justify-content: flex-start;
+}
+
+/* Message Bubble */
+.message-bubble {
+  padding: 12px 18px;
+  border-radius: 20px;
+  max-width: 65%;
+  font-size: 16px;
+  line-height: 1.4;
+  animation: fadeIn 0.3s ease-in-out;
+}
+
+.message-bubble.patient {
+  background: #d1f5d3;
+}
+
+.message-bubble.doctor {
+  background: #e0e0e0;
+}
+
+/* Controls */
+.controls {
+  margin-top: 25px;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  gap: 20px;
+}
+
+/* Select */
+.speaker-select {
+  padding: 10px 15px;
+  border-radius: 10px;
+  border: 1px solid #ccc;
+  font-size: 16px;
+}
+
+/* Speak Button */
+.speak-button {
+  padding: 14px 40px;
+  font-size: 18px;
+  border-radius: 50px;
+  border: none;
+  background: #2a5298;
+  color: white;
+  cursor: pointer;
+  transition: all 0.3s ease;
+}
+
+.speak-button:hover {
+  background: #1e3c72;
+  transform: translateY(-2px);
+}
+
+/* End Button */
+.end-button {
+  margin-top: 20px;
+  padding: 10px 30px;
+  border-radius: 30px;
+  border: none;
+  background: #ff4b5c;
+  color: white;
+  cursor: pointer;
+  transition: 0.3s ease;
+}
+
+.end-button:hover {
+  background: #d93745;
+}
+
+/* Smooth fade animation */
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+    transform: translateY(8px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}

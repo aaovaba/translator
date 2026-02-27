@@ -5,6 +5,7 @@ from app.services.ai import (
     transcribe_audio,
     detect_language,
     generate_tts_audio,
+    classify_speaker
 )
 
 router = APIRouter()
@@ -20,7 +21,9 @@ async def websocket_endpoint(websocket: WebSocket):
     transcript_log = []
 
     try:
-        # ---------------- CONSENT ----------------
+        # ==========================================
+        #               CONSENT FLOW
+        # ==========================================
 
         audio_bytes = await websocket.receive_bytes()
         first_text = await transcribe_audio(audio_bytes)
@@ -52,7 +55,9 @@ async def websocket_endpoint(websocket: WebSocket):
             "audio": consent_audio
         })
 
-        # -------- CONSENT RESPONSE --------
+        # ==========================================
+        #         CONSENT RESPONSE
+        # ==========================================
 
         audio_bytes = await websocket.receive_bytes()
         consent_text = await transcribe_audio(audio_bytes)
@@ -70,7 +75,6 @@ async def websocket_endpoint(websocket: WebSocket):
         )
 
         decision = classification.choices[0].message.content.strip().upper()
-
         print("Consent classification:", decision)
 
         if not decision.startswith("YES"):
@@ -86,10 +90,16 @@ async def websocket_endpoint(websocket: WebSocket):
             "text": "Consent granted"
         })
 
-        # ---------------- TRANSLATION LOOP ----------------
+        # ==========================================
+        #           TRANSLATION LOOP
+        # ==========================================
 
         while True:
             message = await websocket.receive()
+
+            # --------------------------------------
+            # END SESSION
+            # --------------------------------------
 
             if "text" in message and message["text"] == "end_session":
 
@@ -101,7 +111,7 @@ async def websocket_endpoint(websocket: WebSocket):
                     messages=[
                         {
                             "role": "system",
-                            "content": "Summarize this medical consultation in bullet points."
+                            "content": "Summarize this medical consultation clearly in bullet points."
                         },
                         {"role": "user", "content": summary_prompt}
                     ]
@@ -115,7 +125,9 @@ async def websocket_endpoint(websocket: WebSocket):
                 await websocket.close()
                 break
 
-            # -------- NORMAL SPEECH --------
+            # --------------------------------------
+            # NORMAL SPEECH
+            # --------------------------------------
 
             audio_bytes = message["bytes"]
             spoken_text = await transcribe_audio(audio_bytes)
@@ -125,16 +137,34 @@ async def websocket_endpoint(websocket: WebSocket):
             print("Spoken:", spoken_text)
             print("Detected speech language:", detected_language)
 
-            # 🔥 FIXED SPEAKER LOGIC
-            # If English → doctor
-            # Otherwise → patient
+            # ======================================
+            # 🔥 HYBRID SPEAKER LOGIC
+            # ======================================
 
+            # 1️⃣ English → Doctor
             if detected_language.lower() == "english":
                 speaker = "doctor"
                 target_language = patient_language
-            else:
+
+            # 2️⃣ Same as patient language → Patient
+            elif detected_language.lower() == patient_language.lower():
                 speaker = "patient"
                 target_language = "English"
+
+            # 3️⃣ Ambiguous → AI decides
+            else:
+                ai_role = classify_speaker(spoken_text, transcript_log)
+
+                if ai_role == "DOCTOR":
+                    speaker = "doctor"
+                    target_language = patient_language
+                else:
+                    speaker = "patient"
+                    target_language = "English"
+
+            # --------------------------------------
+            # TRANSLATION
+            # --------------------------------------
 
             translation = client.chat.completions.create(
                 model="gpt-4o-mini",
@@ -144,8 +174,6 @@ async def websocket_endpoint(websocket: WebSocket):
                     {"role": "user", "content": f"Translate to {target_language}: {spoken_text}"}
                 ]
             ).choices[0].message.content.strip()
-
-            print("Translated:", translation)
 
             transcript_log.append(f"{speaker.upper()}: {spoken_text}")
 

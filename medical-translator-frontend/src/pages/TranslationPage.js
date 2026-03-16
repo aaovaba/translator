@@ -1,5 +1,5 @@
 import React, { useEffect, useRef, useState } from "react";
-
+import "./TranslationPage.css";
 export default function TranslationPage({ socket, onSessionEnd }) {
   const [messages, setMessages] = useState([]);
   const mediaRecorderRef = useRef(null);
@@ -73,55 +73,87 @@ export default function TranslationPage({ socket, onSessionEnd }) {
     socket.send("end_session");
   };
 
-  return (
-    <div style={{ padding: 40 }}>
-      <h2>Live Translation</h2>
+  // return (
+  //   <div style={{ padding: 40 }}>
+  //     <h2>Live Translation</h2>
 
-      <div style={{
-        height: "60vh",
-        overflowY: "auto",
-        border: "1px solid #ccc",
-        padding: 20
-      }}>
+  //     <div style={{
+  //       height: "60vh",
+  //       overflowY: "auto",
+  //       border: "1px solid #ccc",
+  //       padding: 20
+  //     }}>
+  //       {messages.map((msg, i) => (
+  //         <div key={i}
+  //           style={{
+  //             display: "flex",
+  //             justifyContent:
+  //               msg.speaker === "patient"
+  //                 ? "flex-end"
+  //                 : "flex-start",
+  //             marginBottom: 10
+  //           }}>
+  //           <div style={{
+  //             background:
+  //               msg.speaker === "patient"
+  //                 ? "#d1f5d3"
+  //                 : "#e0e0e0",
+  //             padding: 10,
+  //             borderRadius: 10
+  //           }}>
+  //             {msg.text}
+  //           </div>
+  //         </div>
+  //       ))}
+  //     </div>
+
+  //     <button onClick={startRecording}
+  //       style={{ padding: "15px 40px", marginTop: 20 }}>
+  //       🎙 Speak
+  //     </button>
+
+  //     <button onClick={endSession}
+  //       style={{
+  //         padding: "10px 30px",
+  //         marginTop: 20,
+  //         marginLeft: 20,
+  //         backgroundColor: "#ff4d4d",
+  //         color: "white"
+  //       }}>
+  //       End Session
+  //     </button>
+  //   </div>
+  // );
+return (
+  <div className="translation-container">
+    <div className="translation-card">
+      <h2 className="translation-title">Live Translation</h2>
+
+      <div className="chat-window">
         {messages.map((msg, i) => (
-          <div key={i}
-            style={{
-              display: "flex",
-              justifyContent:
-                msg.speaker === "patient"
-                  ? "flex-end"
-                  : "flex-start",
-              marginBottom: 10
-            }}>
-            <div style={{
-              background:
-                msg.speaker === "patient"
-                  ? "#d1f5d3"
-                  : "#e0e0e0",
-              padding: 10,
-              borderRadius: 10
-            }}>
+          <div
+            key={i}
+            className={`message-row ${msg.speaker === "patient" ? "patient" : "doctor"}`}
+          >
+            <div
+              className={`message-bubble ${msg.speaker === "patient" ? "patient" : "doctor"}`}
+            >
               {msg.text}
             </div>
           </div>
         ))}
       </div>
 
-      <button onClick={startRecording}
-        style={{ padding: "15px 40px", marginTop: 20 }}>
-        🎙 Speak
-      </button>
+      <div className="controls">
+        <button onClick={startRecording} className="speak-button">
+          Speak
+        </button>
 
-      <button onClick={endSession}
-        style={{
-          padding: "10px 30px",
-          marginTop: 20,
-          marginLeft: 20,
-          backgroundColor: "#ff4d4d",
-          color: "white"
-        }}>
-        End Session
-      </button>
+        <button onClick={endSession} className="end-button">
+          End Session
+        </button>
+      </div>
     </div>
-  );
+  </div>
+);
 }

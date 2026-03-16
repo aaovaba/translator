@@ -1,49 +1,39 @@
-/* Page Container */
 .translation-container {
   min-height: 100vh;
-  background: linear-gradient(135deg, #1e3c72, #2a5298);
+  background: linear-gradient(135deg, #eef2f7, #dbe6f6);
   display: flex;
-  justify-content: center;
   align-items: center;
-  padding: 40px;
-  font-family: "Segoe UI", sans-serif;
+  justify-content: center;
+  font-family: Helvetica, Arial, sans-serif;
 }
 
-/* Card */
 .translation-card {
-  width: 900px;
   background: white;
-  border-radius: 20px;
-  box-shadow: 0 20px 40px rgba(0, 0, 0, 0.2);
-  padding: 30px;
-  display: flex;
-  flex-direction: column;
+  width: 600px;
+  padding: 40px;
+  border-radius: 16px;
+  box-shadow: 0 10px 30px rgba(0,0,0,0.1);
 }
 
-/* Header */
-.translation-header {
-  text-align: center;
+.translation-title {
   font-size: 28px;
-  font-weight: 600;
   margin-bottom: 20px;
-  color: #2a5298;
+  text-align: center;
+  color: #222;
 }
 
-/* Chat Box */
-.chat-box {
-  height: 60vh;
+.chat-window {
+  height: 55vh;
   overflow-y: auto;
-  border-radius: 15px;
+  border: 1px solid #ddd;
+  border-radius: 10px;
   padding: 20px;
-  background: #f4f7fb;
-  display: flex;
-  flex-direction: column;
-  gap: 12px;
+  background: #fafafa;
 }
 
-/* Message Wrapper */
 .message-row {
   display: flex;
+  margin-bottom: 12px;
 }
 
 .message-row.patient {
@@ -54,14 +44,12 @@
   justify-content: flex-start;
 }
 
-/* Message Bubble */
 .message-bubble {
-  padding: 12px 18px;
-  border-radius: 20px;
-  max-width: 65%;
-  font-size: 16px;
+  max-width: 70%;
+  padding: 12px 16px;
+  border-radius: 14px;
+  font-size: 15px;
   line-height: 1.4;
-  animation: fadeIn 0.3s ease-in-out;
 }
 
 .message-bubble.patient {
@@ -69,67 +57,42 @@
 }
 
 .message-bubble.doctor {
-  background: #e0e0e0;
+  background: #e5e5e5;
 }
 
-/* Controls */
 .controls {
-  margin-top: 25px;
+  margin-top: 20px;
   display: flex;
   justify-content: center;
-  align-items: center;
-  gap: 20px;
+  gap: 15px;
 }
 
-/* Select */
-.speaker-select {
-  padding: 10px 15px;
-  border-radius: 10px;
-  border: 1px solid #ccc;
-  font-size: 16px;
-}
-
-/* Speak Button */
 .speak-button {
-  padding: 14px 40px;
-  font-size: 18px;
-  border-radius: 50px;
+  padding: 14px 36px;
+  font-size: 16px;
   border: none;
-  background: #2a5298;
+  border-radius: 8px;
+  background: #2f80ed;
   color: white;
   cursor: pointer;
-  transition: all 0.3s ease;
+  transition: background 0.2s ease;
 }
 
 .speak-button:hover {
-  background: #1e3c72;
-  transform: translateY(-2px);
+  background: #1c63c7;
 }
 
-/* End Button */
 .end-button {
-  margin-top: 20px;
-  padding: 10px 30px;
-  border-radius: 30px;
+  padding: 12px 28px;
+  font-size: 15px;
   border: none;
-  background: #ff4b5c;
+  border-radius: 8px;
+  background: #ff4d4d;
   color: white;
   cursor: pointer;
-  transition: 0.3s ease;
+  transition: background 0.2s ease;
 }
 
 .end-button:hover {
-  background: #d93745;
-}
-
-/* Smooth fade animation */
-@keyframes fadeIn {
-  from {
-    opacity: 0;
-    transform: translateY(8px);
-  }
-  to {
-    opacity: 1;
-    transform: translateY(0);
-  }
+  background: #e63b3b;
 }

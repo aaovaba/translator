@@ -1,3 +1,6 @@
+* {
+  box-sizing: border-box;
+}
 .signup-wrapper {
   height: 100vh;
   display: flex;
@@ -43,7 +46,9 @@
 }
 
 .row input {
-  width: 50%;
+  /* width: 50%; */
+    flex: 1;
+
 }
 
 /* inputs */

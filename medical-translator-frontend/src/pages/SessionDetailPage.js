@@ -2,9 +2,9 @@ import React, { useEffect, useState } from "react";
 
 export default function SessionDetailPage({ sessionId }) {
   const [session, setSession] = useState(null);
-
+  const BASE_URL = process.env.REACT_APP_API_URL;
   useEffect(() => {
-    fetch(`http://localhost:8000/sessions/${sessionId}`)
+    fetch(`${BASE_URL}/sessions/${sessionId}`)
       .then(res => res.json())
       .then(setSession);
   }, [sessionId]);

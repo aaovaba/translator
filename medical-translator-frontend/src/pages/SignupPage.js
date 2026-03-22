@@ -3,6 +3,7 @@ import "./SignupPage.css";
 import logo from "../assets/logo.png";
 
 function SignupPage({ onSignup, goToLogin }) {
+  const BASE_URL = process.env.REACT_APP_API_URL;
   const [form, setForm] = useState({
     firstName: "",
     lastName: "",
@@ -43,7 +44,7 @@ function SignupPage({ onSignup, goToLogin }) {
     try {
       setLoading(true);
 
-      const res = await fetch("http://localhost:8000/auth/signup", {
+      const res = await fetch(`${BASE_URL}/auth/signup`, {
         method: "POST",
         headers: {
           "Content-Type": "application/json"

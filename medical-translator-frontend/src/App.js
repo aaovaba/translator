@@ -21,7 +21,11 @@ function App() {
     const token = localStorage.getItem("token");
     if (!token) return;
 
-    const ws = new WebSocket(`ws://localhost:8000/ws?token=${token}`);
+    // const ws = new WebSocket(`ws://localhost:8000/ws?token=${token}`);
+
+    const WS_URL = "https://translator-4-v7xw.onrender.com";
+
+    const ws = new WebSocket(`${WS_URL}/ws?token=${token}`);
 
     ws.onopen = () => {
       console.log("Connected to backend");

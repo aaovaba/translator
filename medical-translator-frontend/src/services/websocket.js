@@ -1,7 +1,7 @@
 let socket = null;
-
+const Base_URL = process.env.REACT_APP_API_URL;
 export const connectWebSocket = (onMessage) => {
-  socket = new WebSocket("ws://localhost:8000/ws");
+  socket = new WebSocket(`${Base_URL}/ws`);
 
   socket.onopen = () => {
     console.log("Connected to backend");

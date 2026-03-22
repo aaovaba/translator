@@ -7,8 +7,8 @@ from app.routers import session
 app = FastAPI()
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],  # for development
-    allow_credentials=True,
+    allow_origins=["*"],
+    allow_credentials=False,  # important
     allow_methods=["*"],
     allow_headers=["*"],
 )

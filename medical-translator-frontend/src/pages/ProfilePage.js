@@ -3,9 +3,9 @@ import React, { useEffect, useState } from "react";
 export default function ProfilePage({ onSelectSession }) {
   const [sessions, setSessions] = useState([]);
   const user = JSON.parse(localStorage.getItem("user") || "{}");
-
+  const BASE_URL = process.env.REACT_APP_API_URL;
   useEffect(() => {
-    fetch("http://localhost:8000/sessions", {
+    fetch(`${BASE_URL}/sessions`, {
       headers: {
         Authorization: "Bearer " + localStorage.getItem("token")
       }

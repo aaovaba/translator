@@ -1,6 +1,5 @@
 import React, { useState } from "react";
 import "./ThankYouPage.css";
-import logo from "../assets/logo.png";
 
 export default function ThankYouPage({ summary, onLogout }) {
   const [email, setEmail] = useState("");

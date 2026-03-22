@@ -7,8 +7,11 @@ from app.routers import session
 app = FastAPI()
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],
-    allow_credentials=False,  # important
+    allow_origins=[
+        "http://localhost:3000",
+        "https://translator-n7dr.vercel.app"
+    ],
+    allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
 )

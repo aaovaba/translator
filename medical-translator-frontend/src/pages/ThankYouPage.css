@@ -75,3 +75,25 @@
 .share-button:hover {
   background: #1c63c7;
 }
+
+
+.logout-button {
+  background: #ff4d4d;
+  color: white;
+  border: none;
+  padding: 8px 16px;
+  border-radius: 6px;
+  cursor: pointer;
+  font-size: 13px;
+}
+
+.logout-button:hover {
+  background: #e60000;
+}
+
+/* header layout */
+.header-right {
+  display: flex;
+  align-items: center;
+  gap: 15px;
+}

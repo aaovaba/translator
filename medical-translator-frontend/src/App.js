@@ -8,7 +8,6 @@ import ThankYouPage from "./pages/ThankYouPage";
 function App() {
   const [socket, setSocket] = useState(null);
 
-  // login | signup | consent | translation | thankyou
   const [page, setPage] = useState(
     localStorage.getItem("token") ? "consent" : "login"
   );
@@ -16,79 +15,41 @@ function App() {
   const [messages, setMessages] = useState([]);
   const [summary, setSummary] = useState("");
 
-  // ✅ WebSocket setup (GLOBAL)
-  // useEffect(() => {
-  //   const token = localStorage.getItem("token");
-
-  //   if (!token) return;
-
-  //   // prevent multiple connections
-  //   if (socket) return;
-
-  //   const ws = new WebSocket(`ws://localhost:8000/ws?token=${token}`);
-
-  //   ws.onopen = () => {
-  //     console.log("Connected to backend");
-  //   };
-
-  //   ws.onmessage = (event) => {
-  //     const data = JSON.parse(event.data);
-  //     console.log("Received:", data);
-
-  //     setMessages((prev) => [...prev, data]);
-  //   };
-
-  //   ws.onclose = () => {
-  //     console.log("Disconnected from backend");
-  //   };
-
-  //   setSocket(ws);
-
-  //   return () => {
-  //     ws.close();
-  //   };
-  // }, [page]); // 🔥 triggers after login
+  // ✅ WebSocket (ONLY ONCE)
   useEffect(() => {
-  const token = localStorage.getItem("token");
+    const token = localStorage.getItem("token");
+    if (!token) return;
 
-  if (!token) return;
+    const ws = new WebSocket(`ws://localhost:8000/ws?token=${token}`);
 
-  const ws = new WebSocket(`ws://localhost:8000/ws?token=${token}`);
+    ws.onopen = () => {
+      console.log("Connected to backend");
+    };
 
-  ws.onopen = () => {
-    console.log("Connected to backend");
-  };
+    ws.onmessage = (event) => {
+      const data = JSON.parse(event.data);
+      setMessages((prev) => [...prev, data]);
+    };
 
-  ws.onmessage = (event) => {
-    const data = JSON.parse(event.data);
-    setMessages((prev) => [...prev, data]);
-  };
+    ws.onclose = () => {
+      console.log("Disconnected from backend");
+    };
 
-  ws.onclose = () => {
-    console.log("Disconnected from backend");
-  };
+    setSocket(ws);
 
-  setSocket(ws);
+    window.addEventListener("beforeunload", () => {
+      ws.close();
+    });
 
-  // ❗ ONLY CLOSE when app unloads
-  window.addEventListener("beforeunload", () => {
-    ws.close();
-  });
+  }, []);
 
-}, []);
-
-  // 🔐 Auth handlers
-  const handleLogin = () => {
-    setPage("consent");
-  };
-
+  // 🔐 Auth
+  const handleLogin = () => setPage("consent");
   const goToSignup = () => setPage("signup");
   const goToLogin = () => setPage("login");
 
-  // 🧠 Flow handlers
-  const handleConsentGranted = () => {
-    setPage("translation");
-  };
+  // 🧠 Flow
+  const handleConsentGranted = () => setPage("translation");
 
   const handleSessionEnd = (sessionSummary) => {
     setSummary(sessionSummary);
@@ -98,9 +59,9 @@ function App() {
   const handleLogout = () => {
     localStorage.removeItem("token");
     localStorage.removeItem("user");
-    if (socket) {
-    socket.close(); // 🔥 close connection properly
-    }
+
+    if (socket) socket.close();
+
     setSocket(null);
     setMessages([]);
     setPage("login");
@@ -109,30 +70,15 @@ function App() {
   // ---------- ROUTING ----------
 
   if (page === "login") {
-    return (
-      <LoginPage
-        onLogin={handleLogin}
-        goToSignup={goToSignup}
-      />
-    );
+    return <LoginPage onLogin={handleLogin} goToSignup={goToSignup} />;
   }
 
   if (page === "signup") {
-    return (
-      <SignupPage
-        onSignup={handleLogin}
-        goToLogin={goToLogin}
-      />
-    );
+    return <SignupPage onSignup={handleLogin} goToLogin={goToLogin} />;
   }
 
-  // show connecting only when needed
   if ((page === "consent" || page === "translation") && !socket) {
-    return (
-      <div style={{ textAlign: "center", marginTop: "50px" }}>
-        Connecting...
-      </div>
-    );
+    return <div style={{ textAlign: "center", marginTop: "50px" }}>Connecting...</div>;
   }
 
   if (page === "consent") {
@@ -141,6 +87,7 @@ function App() {
         socket={socket}
         messages={messages}
         onConsentGranted={handleConsentGranted}
+        onLogout={handleLogout}   // ✅ added
       />
     );
   }

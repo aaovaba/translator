@@ -1,6 +1,8 @@
 import React, { useState } from "react";
 import "./ThankYouPage.css";
-export default function ThankYouPage({ summary }) {
+import logo from "../assets/logo.png";
+
+export default function ThankYouPage({ summary, onLogout }) {
   const [email, setEmail] = useState("");
 
   const shareByEmail = () => {
@@ -41,6 +43,7 @@ export default function ThankYouPage({ summary }) {
   // );
 return (
   <div className="thankyou-container">
+    
     <div className="thankyou-card">
       <h2 className="thankyou-title">Thank You</h2>
       <p className="thankyou-subtext">The consultation has ended.</p>
@@ -66,6 +69,9 @@ return (
         >
           Share
         </button>
+        <button className="logout-button" onClick={onLogout}>
+  Logout
+</button>
       </div>
     </div>
   </div>

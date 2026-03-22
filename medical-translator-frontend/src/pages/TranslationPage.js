@@ -1,67 +1,62 @@
 import React, { useEffect, useRef, useState } from "react";
 import "./TranslationPage.css";
+import logo from "../assets/logo.png";
 
-export default function TranslationPage({ socket, messages, onSessionEnd }) {
+export default function TranslationPage({
+  socket,
+  messages,
+  onSessionEnd,
+  onLogout
+}) {
   const [chat, setChat] = useState([]);
   const mediaRecorderRef = useRef(null);
   const audioChunksRef = useRef([]);
 
-  useEffect(() => {
-    const lastMessage = messages[messages.length - 1];
-    if (!lastMessage) return;
+  const user = JSON.parse(localStorage.getItem("user") || "{}");
 
-    if (lastMessage.type === "translation") {
-      setChat(prev => [
+  useEffect(() => {
+    const last = messages[messages.length - 1];
+    if (!last) return;
+
+    if (last.type === "translation") {
+      setChat((prev) => [
         ...prev,
-        { speaker: lastMessage.speaker, text: lastMessage.translated }
+        { speaker: last.speaker, text: last.translated }
       ]);
-      playAudio(lastMessage.audio);
+      playAudio(last.audio);
     }
 
-    if (lastMessage.type === "summary") {
-      onSessionEnd(lastMessage.text);
+    if (last.type === "summary") {
+      onSessionEnd(last.text);
     }
   }, [messages]);
 
-  const playAudio = (base64Audio) => {
-    if (!base64Audio) return;
-    const audio = new Audio("data:audio/mp3;base64," + base64Audio);
-    audio.play();
+  const playAudio = (audio) => {
+    if (!audio) return;
+    new Audio("data:audio/mp3;base64," + audio).play();
   };
 
   const startRecording = async () => {
     const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
 
-    const mediaRecorder = new MediaRecorder(stream, {
-      mimeType: "audio/webm"
-    });
-
-    mediaRecorderRef.current = mediaRecorder;
+    const recorder = new MediaRecorder(stream, { mimeType: "audio/webm" });
+    mediaRecorderRef.current = recorder;
     audioChunksRef.current = [];
 
-    mediaRecorder.ondataavailable = (event) => {
-      if (event.data.size > 0) {
-        audioChunksRef.current.push(event.data);
+    recorder.ondataavailable = (e) => {
+      if (e.data.size > 0) {
+        audioChunksRef.current.push(e.data);
       }
     };
 
-    mediaRecorder.onstop = async () => {
-      const blob = new Blob(audioChunksRef.current, {
-        type: "audio/webm"
-      });
-
-      const arrayBuffer = await blob.arrayBuffer();
-      socket.send(arrayBuffer);
-      audioChunksRef.current = [];
+    recorder.onstop = async () => {
+      const blob = new Blob(audioChunksRef.current);
+      const buffer = await blob.arrayBuffer();
+      socket.send(buffer);
     };
 
-    mediaRecorder.start();
-
-    setTimeout(() => {
-      if (mediaRecorder.state === "recording") {
-        mediaRecorder.stop();
-      }
-    }, 4000);
+    recorder.start();
+    setTimeout(() => recorder.stop(), 4000);
   };
 
   const endSession = () => {
@@ -70,8 +65,26 @@ export default function TranslationPage({ socket, messages, onSessionEnd }) {
 
   return (
     <div className="translation-container">
+
+      {/* HEADER */}
+      <div className="app-header">
+        <div className="header-left">
+          <img src={logo} alt="logo" className="logo-small" />
+        </div>
+
+        <div className="header-center">
+👋 Hello, <span className="username">{user.firstName || "Doctor"}</span>        </div>
+
+        <div className="header-right">
+          <button className="logout-button" onClick={onLogout}>
+            Logout
+          </button>
+        </div>
+      </div>
+
+      {/* MAIN CARD */}
       <div className="translation-card">
-        <h2 className="translation-title">Live Translation</h2>
+        <h2>Live Translation</h2>
 
         <div className="chat-window">
           {chat.map((msg, i) => (

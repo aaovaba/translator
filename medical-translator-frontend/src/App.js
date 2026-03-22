@@ -4,7 +4,8 @@ import SignupPage from "./pages/SignupPage";
 import ConsentPage from "./pages/ConsentPage";
 import TranslationPage from "./pages/TranslationPage";
 import ThankYouPage from "./pages/ThankYouPage";
-
+import ProfilePage from "./pages/ProfilePage";
+import SessionDetailPage from "./pages/SessionDetailPage";
 function App() {
   const [socket, setSocket] = useState(null);
 
@@ -14,7 +15,7 @@ function App() {
 
   const [messages, setMessages] = useState([]);
   const [summary, setSummary] = useState("");
-
+  const [selectedSession, setSelectedSession] = useState(null);
   // ✅ WebSocket (ONLY ONCE)
   useEffect(() => {
     const token = localStorage.getItem("token");
@@ -99,9 +100,33 @@ function App() {
         messages={messages}
         onSessionEnd={handleSessionEnd}
         onLogout={handleLogout}
+        goToProfile={() => setPage("profile")}
       />
     );
   }
+
+  if (page === "profile") {
+  return (
+    <ProfilePage
+      onBack={() => setPage("translation")}
+      onSelectSession={(id) => {
+        setSelectedSession(id);
+        setPage("sessionDetail");
+      }}
+    />
+  );
+}
+
+if (page === "sessionDetail") {
+  return (
+    <SessionDetailPage
+      sessionId={selectedSession}
+      onBack={() => setPage("profile")}
+    />
+  );
+}
+
+
 
   if (page === "thankyou") {
     return (

@@ -185,3 +185,8 @@
 .logout-button:hover {
   box-shadow: 0 4px 12px rgba(255, 77, 77, 0.3);
 }
+.profile-icon {
+  font-size: 20px;
+  margin-right: 12px;
+  cursor: pointer;
+}

@@ -6,7 +6,8 @@ export default function TranslationPage({
   socket,
   messages,
   onSessionEnd,
-  onLogout
+  onLogout,
+  goToProfile
 }) {
   const [chat, setChat] = useState([]);
   const mediaRecorderRef = useRef(null);
@@ -73,28 +74,28 @@ export default function TranslationPage({
         </div>
 
         <div className="header-center">
-👋 Hello, <span className="username">{user.firstName || "Doctor"}</span>        </div>
+          👋 Hello, <span className="username">{user.firstName || "Doctor"}</span>
+        </div>
 
         <div className="header-right">
+          <div className="profile-icon" onClick={goToProfile}>
+            👤
+          </div>
+
           <button className="logout-button" onClick={onLogout}>
             Logout
           </button>
         </div>
       </div>
 
-      {/* MAIN CARD */}
+      {/* CARD */}
       <div className="translation-card">
         <h2>Live Translation</h2>
 
         <div className="chat-window">
           {chat.map((msg, i) => (
-            <div
-              key={i}
-              className={`message-row ${msg.speaker === "patient" ? "patient" : "doctor"}`}
-            >
-              <div
-                className={`message-bubble ${msg.speaker === "patient" ? "patient" : "doctor"}`}
-              >
+            <div key={i} className={`message-row ${msg.speaker}`}>
+              <div className={`message-bubble ${msg.speaker}`}>
                 {msg.text}
               </div>
             </div>

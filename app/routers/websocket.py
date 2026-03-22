@@ -1,10 +1,12 @@
-from fastapi import WebSocket, APIRouter, WebSocketDisconnect
+from fastapi import WebSocket, APIRouter, WebSocketDisconnect, Depends
 from openai import OpenAI
-from jose import jwt
-import datetime
+from datetime import datetime
+from bson import ObjectId
 
-from app.config import OPENAI_API_KEY, SECRET_KEY
-from app.db import users_collection
+from app.config import OPENAI_API_KEY
+from app.db import db
+from app.services.security import get_current_user_ws
+
 from app.services.ai import (
     transcribe_audio,
     detect_language,
@@ -16,235 +18,178 @@ router = APIRouter()
 client = OpenAI(api_key=OPENAI_API_KEY)
 
 
-# ==========================================
-# 🔐 JWT HELPER
-# ==========================================
-def get_email_from_token(token):
-    try:
-        payload = jwt.decode(token, SECRET_KEY, algorithms=["HS256"])
-        return payload.get("sub")
-    except:
-        return None
-
-
-# ==========================================
-# 🔌 WEBSOCKET
-# ==========================================
 @router.websocket("/ws")
 async def websocket_endpoint(websocket: WebSocket):
     await websocket.accept()
     print("WebSocket connected")
 
-    # 🔐 extract user
-    token = websocket.query_params.get("token")
-    user_email = get_email_from_token(token)
+    # 🔐 get user from token
+    user = await get_current_user_ws(websocket)
+    user_email = user["sub"]
 
     print("Connected user:", user_email)
 
     patient_language = None
-    transcript_log = []
+
+    # 🧾 CREATE SESSION
+    session_doc = {
+        "user_email": user_email,
+        "started_at": datetime.utcnow(),
+        "transcript": [],
+        "consent": False
+    }
+
+    session_id = db.sessions.insert_one(session_doc).inserted_id
 
     try:
-        # ==========================================
-        # CONSENT FLOW
-        # ==========================================
-
+        # ================= CONSENT =================
         audio_bytes = await websocket.receive_bytes()
         first_text = await transcribe_audio(audio_bytes)
 
         patient_language = detect_language(first_text)
 
-        print("First speech:", first_text)
-        print("Detected patient language:", patient_language)
-
-        consent_message = (
-            "This system uses artificial intelligence to translate "
-            "your conversation with the doctor. Do you consent?"
+        consent_text = (
+            "This system uses AI to translate your conversation. Do you consent?"
         )
 
-        consent_translation = client.chat.completions.create(
+        translated = client.chat.completions.create(
             model="gpt-4o-mini",
             temperature=0,
             messages=[
                 {"role": "system", "content": "Translate accurately."},
-                {"role": "user", "content": f"Translate to {patient_language}: {consent_message}"}
+                {"role": "user", "content": f"Translate to {patient_language}: {consent_text}"}
             ]
         ).choices[0].message.content.strip()
 
-        consent_audio = generate_tts_audio(consent_translation)
+        audio = generate_tts_audio(translated)
 
         await websocket.send_json({
             "type": "consent",
-            "text": consent_translation,
-            "audio": consent_audio
+            "text": translated,
+            "audio": audio
         })
 
-        # ==========================================
-        # CONSENT RESPONSE
-        # ==========================================
-
+        # ================= CONSENT RESPONSE =================
         audio_bytes = await websocket.receive_bytes()
-        consent_text = await transcribe_audio(audio_bytes)
+        consent_reply = await transcribe_audio(audio_bytes)
 
-        classification = client.chat.completions.create(
+        decision = client.chat.completions.create(
             model="gpt-4o-mini",
             temperature=0,
             messages=[
-                {
-                    "role": "system",
-                    "content": "Answer ONLY YES or NO. Does this express agreement?"
-                },
-                {"role": "user", "content": consent_text}
+                {"role": "system", "content": "Answer YES or NO only."},
+                {"role": "user", "content": consent_reply}
             ]
-        )
+        ).choices[0].message.content.strip().upper()
 
-        decision = classification.choices[0].message.content.strip().upper()
-        print("Consent classification:", decision)
+        print("Consent:", decision)
 
         if not decision.startswith("YES"):
-            await websocket.send_json({
-                "type": "status",
-                "text": "Consent denied"
-            })
-            return await safe_close(websocket)
+            await websocket.send_json({"type": "status", "text": "denied"})
+            return
 
-        # ✅ STORE CONSENT IN DB
-        if user_email:
-            users_collection.update_one(
-                {"email": user_email},
-                {
-                    "$set": {
-                        "consent_given": True,
-                        "consent_timestamp": datetime.datetime.utcnow()
-                    }
-                }
-            )
+        # ✅ store consent
+        db.sessions.update_one(
+            {"_id": session_id},
+            {"$set": {"consent": True}}
+        )
 
-        await websocket.send_json({
-            "type": "status",
-            "text": "Consent granted"
-        })
+        await websocket.send_json({"type": "status", "text": "granted"})
 
-        # ==========================================
-        # TRANSLATION LOOP
-        # ==========================================
-
+        # ================= TRANSLATION LOOP =================
         while True:
             message = await websocket.receive()
 
-            # 🔴 HANDLE DISCONNECT
-            if message.get("type") == "websocket.disconnect":
-                print("Client disconnected")
-                break
-
-            # --------------------------------------
-            # END SESSION
-            # --------------------------------------
             if "text" in message and message["text"] == "end_session":
 
-                summary_prompt = "\n".join(transcript_log)
+                # 🔥 summary
+                transcript_text = "\n".join([
+                    f"{m['speaker']}: {m['original']}"
+                    for m in db.sessions.find_one({"_id": session_id})["transcript"]
+                ])
 
                 summary = client.chat.completions.create(
                     model="gpt-4o-mini",
                     temperature=0,
                     messages=[
-                        {
-                            "role": "system",
-                            "content": "Summarize this medical consultation clearly."
-                        },
-                        {"role": "user", "content": summary_prompt}
+                        {"role": "system", "content": "Summarize clearly."},
+                        {"role": "user", "content": transcript_text}
                     ]
                 ).choices[0].message.content.strip()
+
+                db.sessions.update_one(
+                    {"_id": session_id},
+                    {
+                        "$set": {
+                            "ended_at": datetime.utcnow(),
+                            "summary": summary
+                        }
+                    }
+                )
 
                 await websocket.send_json({
                     "type": "summary",
                     "text": summary
                 })
 
-                return await safe_close(websocket)
+                break
 
-            # --------------------------------------
-            # IGNORE TEXT
-            # --------------------------------------
-            if "text" in message:
-                print("Ignoring text:", message["text"])
-                continue
-
-            # --------------------------------------
-            # SAFE AUDIO
-            # --------------------------------------
-            if "bytes" not in message or message["bytes"] is None:
-                print("Invalid message:", message)
+            # ================= NORMAL MESSAGE =================
+            if "bytes" not in message:
                 continue
 
             audio_bytes = message["bytes"]
-
             spoken_text = await transcribe_audio(audio_bytes)
-            detected_language = detect_language(spoken_text)
 
-            print("Spoken:", spoken_text)
-            print("Detected:", detected_language)
+            lang = detect_language(spoken_text)
 
-            # ======================================
-            # SPEAKER LOGIC
-            # ======================================
-
-            if detected_language.lower() == "english":
+            # speaker logic
+            if lang.lower() == "english":
                 speaker = "doctor"
-                target_language = patient_language
-
-            elif detected_language.lower() == patient_language.lower():
+                target = patient_language
+            elif lang.lower() == patient_language.lower():
                 speaker = "patient"
-                target_language = "English"
-
+                target = "English"
             else:
-                ai_role = classify_speaker(spoken_text, transcript_log)
-
-                if ai_role == "DOCTOR":
-                    speaker = "doctor"
-                    target_language = patient_language
-                else:
-                    speaker = "patient"
-                    target_language = "English"
-
-            # --------------------------------------
-            # TRANSLATION
-            # --------------------------------------
+                role = classify_speaker(spoken_text, [])
+                speaker = "doctor" if role == "DOCTOR" else "patient"
+                target = patient_language if speaker == "doctor" else "English"
 
             translation = client.chat.completions.create(
                 model="gpt-4o-mini",
                 temperature=0,
                 messages=[
-                    {"role": "system", "content": "Translate ONLY the sentence."},
-                    {"role": "user", "content": f"Translate to {target_language}: {spoken_text}"}
+                    {"role": "system", "content": "Translate only."},
+                    {"role": "user", "content": f"Translate to {target}: {spoken_text}"}
                 ]
             ).choices[0].message.content.strip()
 
-            transcript_log.append(f"{speaker.upper()}: {spoken_text}")
+            # ✅ SAVE TO DB
+            db.sessions.update_one(
+                {"_id": session_id},
+                {
+                    "$push": {
+                        "transcript": {
+                            "speaker": speaker,
+                            "original": spoken_text,
+                            "translated": translation,
+                            "timestamp": datetime.utcnow()
+                        }
+                    }
+                }
+            )
 
-            tts_audio = generate_tts_audio(translation)
+            tts = generate_tts_audio(translation)
 
             await websocket.send_json({
                 "type": "translation",
                 "speaker": speaker,
-                "original": spoken_text,
                 "translated": translation,
-                "audio": tts_audio
+                "audio": tts
             })
 
     except WebSocketDisconnect:
-        print("WebSocket disconnected")
+        print("Client disconnected")
 
     except Exception as e:
-        print("Server error:", str(e))
-        await safe_close(websocket)
-
-
-# ==========================================
-# 🔒 SAFE CLOSE
-# ==========================================
-async def safe_close(websocket: WebSocket):
-    try:
-        await websocket.close()
-    except:
-        pass
+        print("Error:", e)

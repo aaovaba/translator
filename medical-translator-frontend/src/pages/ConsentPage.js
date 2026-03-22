@@ -29,7 +29,7 @@ export default function ConsentPage({
         alert("Consent denied");
       }
     }
-  }, [messages]);
+  }, [messages,onConsentGranted]);
 
   const playAudio = (base64Audio) => {
     if (!base64Audio) return;

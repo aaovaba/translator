@@ -19,7 +19,7 @@ export default function ProfilePage({ onSelectSession }) {
     setSessions([]);
   }
 });
-  }, []);
+  }, [BASE_URL]);
 
   return (
     <div style={{ padding: 40 }}>

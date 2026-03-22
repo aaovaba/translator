@@ -30,7 +30,7 @@ export default function TranslationPage({
     if (last.type === "summary") {
       onSessionEnd(last.text);
     }
-  }, [messages]);
+  }, [messages,onSessionEnd]);
 
   const playAudio = (audio) => {
     if (!audio) return;

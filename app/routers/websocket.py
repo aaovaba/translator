@@ -22,7 +22,7 @@ async def websocket_endpoint(websocket: WebSocket):
 
     try:
         # ==========================================
-        #               CONSENT FLOW
+        # CONSENT FLOW
         # ==========================================
 
         audio_bytes = await websocket.receive_bytes()
@@ -56,7 +56,7 @@ async def websocket_endpoint(websocket: WebSocket):
         })
 
         # ==========================================
-        #         CONSENT RESPONSE
+        # CONSENT RESPONSE
         # ==========================================
 
         audio_bytes = await websocket.receive_bytes()
@@ -82,8 +82,7 @@ async def websocket_endpoint(websocket: WebSocket):
                 "type": "status",
                 "text": "Consent denied"
             })
-            await websocket.close()
-            return
+            return await safe_close(websocket)
 
         await websocket.send_json({
             "type": "status",
@@ -91,16 +90,20 @@ async def websocket_endpoint(websocket: WebSocket):
         })
 
         # ==========================================
-        #           TRANSLATION LOOP
+        # TRANSLATION LOOP
         # ==========================================
 
         while True:
             message = await websocket.receive()
 
+            # ✅ HANDLE DISCONNECT
+            if message.get("type") == "websocket.disconnect":
+                print("Client disconnected")
+                break
+
             # --------------------------------------
             # END SESSION
             # --------------------------------------
-
             if "text" in message and message["text"] == "end_session":
 
                 summary_prompt = "\n".join(transcript_log)
@@ -111,7 +114,7 @@ async def websocket_endpoint(websocket: WebSocket):
                     messages=[
                         {
                             "role": "system",
-                            "content": "Summarize this medical consultation clearly in bullet points."
+                            "content": "Summarize this medical consultation clearly."
                         },
                         {"role": "user", "content": summary_prompt}
                     ]
@@ -122,36 +125,42 @@ async def websocket_endpoint(websocket: WebSocket):
                     "text": summary
                 })
 
-                await websocket.close()
-                break
+                return await safe_close(websocket)
 
             # --------------------------------------
-            # NORMAL SPEECH
+            # IGNORE TEXT
             # --------------------------------------
+            if "text" in message:
+                print("Ignoring text:", message["text"])
+                continue
+
+            # --------------------------------------
+            # SAFE AUDIO HANDLING
+            # --------------------------------------
+            if "bytes" not in message or message["bytes"] is None:
+                print("Invalid message:", message)
+                continue
 
             audio_bytes = message["bytes"]
-            spoken_text = await transcribe_audio(audio_bytes)
 
+            spoken_text = await transcribe_audio(audio_bytes)
             detected_language = detect_language(spoken_text)
 
             print("Spoken:", spoken_text)
-            print("Detected speech language:", detected_language)
+            print("Detected:", detected_language)
 
             # ======================================
-            # 🔥 HYBRID SPEAKER LOGIC
+            # SPEAKER LOGIC
             # ======================================
 
-            # 1️⃣ English → Doctor
             if detected_language.lower() == "english":
                 speaker = "doctor"
                 target_language = patient_language
 
-            # 2️⃣ Same as patient language → Patient
             elif detected_language.lower() == patient_language.lower():
                 speaker = "patient"
                 target_language = "English"
 
-            # 3️⃣ Ambiguous → AI decides
             else:
                 ai_role = classify_speaker(spoken_text, transcript_log)
 
@@ -192,4 +201,12 @@ async def websocket_endpoint(websocket: WebSocket):
 
     except Exception as e:
         print("Server error:", str(e))
+        await safe_close(websocket)
+
+
+# ✅ SAFE CLOSE
+async def safe_close(websocket: WebSocket):
+    try:
         await websocket.close()
+    except:
+        pass

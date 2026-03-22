@@ -1,5 +1,5 @@
 from fastapi import APIRouter, HTTPException
-from pydantic import BaseModel
+from pydantic import BaseModel, EmailStr
 from app.db import users_collection
 from passlib.context import CryptContext
 from jose import jwt
@@ -12,28 +12,40 @@ pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
 ALGORITHM = "HS256"
 
 
+# ==========================================
+# 📦 USER MODEL
+# ==========================================
 class User(BaseModel):
-    email: str
+    firstName: str
+    lastName: str
+    email: EmailStr
+    password: str
+    mobile: str
+    city: str
+
+
+class LoginUser(BaseModel):
+    email: EmailStr
     password: str
 
 
-# def hash_password(password):
-#     return pwd_context.hash(password)
-def hash_password(password):
-    # bcrypt limit fix (72 bytes)
-    password = password[:72]
+# ==========================================
+# 🔐 PASSWORD HELPERS
+# ==========================================
+def hash_password(password: str):
+    password = password[:72]  # bcrypt limit fix
     return pwd_context.hash(password)
 
 
-# def verify_password(password, hashed):
-#     return pwd_context.verify(password, hashed)
-
-def verify_password(password, hashed):
+def verify_password(password: str, hashed: str):
     password = password[:72]
     return pwd_context.verify(password, hashed)
 
 
-def create_token(email):
+# ==========================================
+# 🎟️ JWT TOKEN
+# ==========================================
+def create_token(email: str):
     payload = {
         "sub": email,
         "exp": datetime.datetime.utcnow() + datetime.timedelta(days=1)
@@ -41,30 +53,49 @@ def create_token(email):
     return jwt.encode(payload, SECRET_KEY, algorithm=ALGORITHM)
 
 
-# ✅ SIGNUP
+# ==========================================
+# 🆕 SIGNUP
+# ==========================================
 @router.post("/signup")
 def signup(user: User):
-    existing = users_collection.find_one({"email": user.email})
+    existing_user = users_collection.find_one({"email": user.email})
 
-    if existing:
+    if existing_user:
         raise HTTPException(status_code=400, detail="User already exists")
 
     users_collection.insert_one({
+        "firstName": user.firstName,
+        "lastName": user.lastName,
         "email": user.email,
-        "password": hash_password(user.password)
+        "password": hash_password(user.password),
+        "mobile": user.mobile,
+        "city": user.city,
+        "created_at": datetime.datetime.utcnow()
     })
 
     return {"message": "User created successfully"}
 
 
-# ✅ LOGIN
+# ==========================================
+# 🔑 LOGIN
+# ==========================================
 @router.post("/login")
-def login(user: User):
+def login(user: LoginUser):
     db_user = users_collection.find_one({"email": user.email})
 
-    if not db_user or not verify_password(user.password, db_user["password"]):
-        raise HTTPException(status_code=401, detail="Invalid credentials")
+    if not db_user:
+        raise HTTPException(status_code=401, detail="User not found")
+
+    if not verify_password(user.password, db_user["password"]):
+        raise HTTPException(status_code=401, detail="Invalid password")
 
     token = create_token(user.email)
 
-    return {"token": token}
+    return {
+        "token": token,
+        "user": {
+            "firstName": db_user["firstName"],
+            "lastName": db_user["lastName"],
+            "email": db_user["email"]
+        }
+    }

@@ -13,38 +13,82 @@ function App() {
     localStorage.getItem("token") ? "consent" : "login"
   );
 
+  const [messages, setMessages] = useState([]);
   const [summary, setSummary] = useState("");
 
-  // ✅ CREATE SOCKET ONLY ONCE
+  // ✅ WebSocket setup (GLOBAL)
+  // useEffect(() => {
+  //   const token = localStorage.getItem("token");
+
+  //   if (!token) return;
+
+  //   // prevent multiple connections
+  //   if (socket) return;
+
+  //   const ws = new WebSocket(`ws://localhost:8000/ws?token=${token}`);
+
+  //   ws.onopen = () => {
+  //     console.log("Connected to backend");
+  //   };
+
+  //   ws.onmessage = (event) => {
+  //     const data = JSON.parse(event.data);
+  //     console.log("Received:", data);
+
+  //     setMessages((prev) => [...prev, data]);
+  //   };
+
+  //   ws.onclose = () => {
+  //     console.log("Disconnected from backend");
+  //   };
+
+  //   setSocket(ws);
+
+  //   return () => {
+  //     ws.close();
+  //   };
+  // }, [page]); // 🔥 triggers after login
   useEffect(() => {
-    if (page === "login" || page === "signup") return;
+  const token = localStorage.getItem("token");
 
-    const token = localStorage.getItem("token");
+  if (!token) return;
 
-    const ws = new WebSocket(`ws://localhost:8000/ws?token=${token}`);
+  const ws = new WebSocket(`ws://localhost:8000/ws?token=${token}`);
 
-    ws.onopen = () => {
-      console.log("Connected to backend");
-    };
+  ws.onopen = () => {
+    console.log("Connected to backend");
+  };
 
-    ws.onclose = () => {
-      console.log("Disconnected from backend");
-    };
+  ws.onmessage = (event) => {
+    const data = JSON.parse(event.data);
+    setMessages((prev) => [...prev, data]);
+  };
 
-    setSocket(ws);
+  ws.onclose = () => {
+    console.log("Disconnected from backend");
+  };
 
-    return () => {
-      ws.close();
-    };
-  }, []); // ❗ IMPORTANT: empty dependency array
+  setSocket(ws);
+
+  // ❗ ONLY CLOSE when app unloads
+  window.addEventListener("beforeunload", () => {
+    ws.close();
+  });
+
+}, []);
 
   // 🔐 Auth handlers
-  const handleLogin = () => setPage("consent");
+  const handleLogin = () => {
+    setPage("consent");
+  };
+
   const goToSignup = () => setPage("signup");
   const goToLogin = () => setPage("login");
 
-  // 🧠 Flow
-  const handleConsentGranted = () => setPage("translation");
+  // 🧠 Flow handlers
+  const handleConsentGranted = () => {
+    setPage("translation");
+  };
 
   const handleSessionEnd = (sessionSummary) => {
     setSummary(sessionSummary);
@@ -53,8 +97,13 @@ function App() {
 
   const handleLogout = () => {
     localStorage.removeItem("token");
-    setPage("login");
+    localStorage.removeItem("user");
+    if (socket) {
+    socket.close(); // 🔥 close connection properly
+    }
     setSocket(null);
+    setMessages([]);
+    setPage("login");
   };
 
   // ---------- ROUTING ----------
@@ -77,12 +126,20 @@ function App() {
     );
   }
 
-  if (!socket) return <div>Connecting...</div>;
+  // show connecting only when needed
+  if ((page === "consent" || page === "translation") && !socket) {
+    return (
+      <div style={{ textAlign: "center", marginTop: "50px" }}>
+        Connecting...
+      </div>
+    );
+  }
 
   if (page === "consent") {
     return (
       <ConsentPage
         socket={socket}
+        messages={messages}
         onConsentGranted={handleConsentGranted}
       />
     );
@@ -92,6 +149,7 @@ function App() {
     return (
       <TranslationPage
         socket={socket}
+        messages={messages}
         onSessionEnd={handleSessionEnd}
         onLogout={handleLogout}
       />

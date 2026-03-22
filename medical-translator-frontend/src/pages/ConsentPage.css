@@ -1,65 +1,79 @@
-.consent-container {
-  min-height: 100vh;
-  background: linear-gradient(135deg, #eef2f7, #dbe6f6);
-  display: flex;
-  align-items: center;
-  justify-content: center;
+.consent-wrapper {
+  height: 100vh;
+  background: linear-gradient(135deg, #eef4ff, #f9fbff);
   font-family: Helvetica, Arial, sans-serif;
 }
 
-.consent-card {
-  background: white;
-  padding: 50px;
-  border-radius: 16px;
-  width: 420px;
-  box-shadow: 0 10px 30px rgba(0,0,0,0.1);
-  text-align: center;
+/* 🔥 HEADER */
+.consent-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 20px 40px;
 }
 
-.consent-title {
-  font-size: 28px;
-  margin-bottom: 20px;
-  color: #222;
+.logo-small {
+  width: 220px;
 }
 
-.consent-text {
-  font-size: 18px;
-  line-height: 1.5;
-  margin-top: 20px;
-  color: #444;
-}
-
-.button-group {
-  margin-top: 25px;
-}
-
-.primary-button {
-  padding: 14px 36px;
+.user-greeting {
   font-size: 16px;
+  font-weight: 500;
+  color: #333;
+}
+
+/* CARD */
+.consent-card {
+  max-width: 420px;
+  margin: 80px auto;
+  padding: 35px;
+  background: white;
+
+  border-radius: 16px;
+  text-align: center;
+
+  box-shadow: 0 12px 30px rgba(0, 0, 0, 0.08);
+}
+
+.consent-card h2 {
+  margin-bottom: 10px;
+}
+
+.subtitle {
+  font-size: 13px;
+  color: #666;
+  margin-bottom: 20px;
+}
+
+/* consent text box */
+.consent-box {
+  background: #f5f8ff;
+  padding: 15px;
+  border-radius: 8px;
+  margin-bottom: 20px;
+  font-size: 14px;
+}
+
+/* buttons */
+.primary-button {
+  padding: 12px 25px;
   border: none;
   border-radius: 8px;
-  background-color: #2f80ed;
+  background: linear-gradient(135deg, #1e90ff, #0066ff);
   color: white;
   cursor: pointer;
-  transition: all 0.2s ease;
-}
-
-.primary-button:hover {
-  background-color: #1c63c7;
 }
 
 .secondary-button {
-  padding: 12px 28px;
-  font-size: 15px;
+  padding: 10px 20px;
   border: none;
   border-radius: 8px;
-  background-color: #6c757d;
-  color: white;
-  margin-right: 15px;
+  background: #eee;
   cursor: pointer;
-  transition: all 0.2s ease;
 }
 
-.secondary-button:hover {
-  background-color: #545b62;
+.button-group {
+  display: flex;
+  justify-content: center;
+  gap: 15px;
 }

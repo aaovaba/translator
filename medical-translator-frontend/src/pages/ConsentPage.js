@@ -1,32 +1,30 @@
 import React, { useEffect, useRef, useState } from "react";
 import "./ConsentPage.css";
-export default function ConsentPage({ socket, onConsentGranted }) {
+import logo from "../assets/logo.png";
+
+export default function ConsentPage({ socket, messages, onConsentGranted }) {
   const [consentText, setConsentText] = useState("");
   const mediaRecorderRef = useRef(null);
 
+  const user = JSON.parse(localStorage.getItem("user") || "{}");
+
   useEffect(() => {
-    if (!socket) return;
+    const lastMessage = messages[messages.length - 1];
+    if (!lastMessage) return;
 
-    socket.onmessage = (event) => {
-      const data = JSON.parse(event.data);
-      console.log("ConsentPage received:", data);
+    if (lastMessage.type === "consent") {
+      setConsentText(lastMessage.text);
+      playAudio(lastMessage.audio);
+    }
 
-      if (data.type === "consent") {
-        setConsentText(data.text);
-        playAudio(data.audio);
+    if (lastMessage.type === "status") {
+      if (lastMessage.text.toLowerCase().includes("granted")) {
+        onConsentGranted();
+      } else {
+        alert("Consent denied");
       }
-
-      if (data.type === "status") {
-        const status = data.text.toLowerCase();
-
-        if (status.includes("granted")) {
-          onConsentGranted();
-        } else if (status.includes("denied")) {
-          alert("Consent denied.");
-        }
-      }
-    };
-  }, [socket, onConsentGranted]);
+    }
+  }, [messages]);
 
   const playAudio = (base64Audio) => {
     if (!base64Audio) return;
@@ -35,11 +33,6 @@ export default function ConsentPage({ socket, onConsentGranted }) {
   };
 
   const startRecording = async () => {
-    if (!socket || socket.readyState !== WebSocket.OPEN) {
-      alert("WebSocket not connected.");
-      return;
-    }
-
     const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
 
     const mediaRecorder = new MediaRecorder(stream, {
@@ -51,9 +44,7 @@ export default function ConsentPage({ socket, onConsentGranted }) {
     let audioChunks = [];
 
     mediaRecorder.ondataavailable = (event) => {
-      if (event.data.size > 0) {
-        audioChunks.push(event.data);
-      }
+      if (event.data.size > 0) audioChunks.push(event.data);
     };
 
     mediaRecorder.onstop = async () => {
@@ -70,78 +61,45 @@ export default function ConsentPage({ socket, onConsentGranted }) {
     }, 4000);
   };
 
-  // return (
-  //   <div style={{ padding: "50px", textAlign: "center" }}>
-  //     <h2>Patient Consent</h2>
+  return (
+    <div className="consent-wrapper">
 
-  //     {!consentText && (
-  //       <button
-  //         onClick={startRecording}
-  //         style={{ padding: "15px 40px", fontSize: "18px" }}
-  //       >
-  //         🎙 Record Patient Speech
-  //       </button>
-  //     )}
+      <div className="consent-header">
+        <img src={logo} alt="logo" className="logo-small" />
+        <div>Hello {user.firstName || "Doctor"}</div>
+      </div>
 
-  //     {consentText && (
-  //       <div style={{ marginTop: "30px" }}>
-  //         <p style={{ fontSize: "20px" }}>{consentText}</p>
+      <div className="consent-card">
+        <h2>Patient Consent</h2>
 
-  //         <div style={{ marginTop: "20px" }}>
-  //           <button
-  //             onClick={() => playAudio()}
-  //             style={{ padding: "10px 30px", marginRight: "20px" }}
-  //           >
-  //             🔊 Play Consent
-  //           </button>
+        {!consentText && (
+          <button className="primary-button" onClick={startRecording}>
+            🎙 Start Recording
+          </button>
+        )}
 
-  //           <button
-  //             onClick={startRecording}
-  //             style={{ padding: "15px 40px", fontSize: "18px" }}
-  //           >
-  //             🎙 Record Answer
-  //           </button>
-  //         </div>
-  //       </div>
-  //     )}
-  //   </div>
-  // );
-return (
-  <div className="consent-container">
-    <div className="consent-card">
-      <h2 className="consent-title">Patient Consent</h2>
+        {consentText && (
+          <>
+            <div className="consent-box">{consentText}</div>
 
-      {!consentText && (
-        <button
-          onClick={startRecording}
-          className="primary-button"
-        >
-          Record Patient Speech
-        </button>
-      )}
+            <div className="button-group">
+              <button
+                className="secondary-button"
+                onClick={() => playAudio(consentText)}
+              >
+                🔊 Play
+              </button>
 
-      {consentText && (
-        <>
-          <p className="consent-text">{consentText}</p>
-
-          <div className="button-group">
-            <button
-              onClick={() => playAudio()}
-              className="secondary-button"
-            >
-              Play Consent
-            </button>
-
-            <button
-              onClick={startRecording}
-              className="primary-button"
-            >
-              Record Answer
-            </button>
-          </div>
-        </>
-      )}
+              <button
+                className="primary-button"
+                onClick={startRecording}
+              >
+                🎙 Record Answer
+              </button>
+            </div>
+          </>
+        )}
+      </div>
     </div>
-  </div>
-);
+  );
 }

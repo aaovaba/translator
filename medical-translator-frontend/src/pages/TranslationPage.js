@@ -1,34 +1,30 @@
 import React, { useEffect, useRef, useState } from "react";
 import "./TranslationPage.css";
-export default function TranslationPage({ socket, onSessionEnd }) {
-  const [messages, setMessages] = useState([]);
+
+export default function TranslationPage({ socket, messages, onSessionEnd }) {
+  const [chat, setChat] = useState([]);
   const mediaRecorderRef = useRef(null);
   const audioChunksRef = useRef([]);
 
   useEffect(() => {
-    if (!socket) return;
+    const lastMessage = messages[messages.length - 1];
+    if (!lastMessage) return;
 
-    socket.onmessage = (event) => {
-      const data = JSON.parse(event.data);
+    if (lastMessage.type === "translation") {
+      setChat(prev => [
+        ...prev,
+        { speaker: lastMessage.speaker, text: lastMessage.translated }
+      ]);
+      playAudio(lastMessage.audio);
+    }
 
-      if (data.type === "translation") {
-        setMessages(prev => [
-          ...prev,
-          { speaker: data.speaker, text: data.translated }
-        ]);
-        playAudio(data.audio);
-      }
-
-      if (data.type === "summary") {
-        // onSessionEnd(data.text);
-        if (onSessionEnd) {
-    onSessionEnd(data.text);
-        }
-      }
-    };
-  }, [socket, onSessionEnd]);
+    if (lastMessage.type === "summary") {
+      onSessionEnd(lastMessage.text);
+    }
+  }, [messages]);
 
   const playAudio = (base64Audio) => {
+    if (!base64Audio) return;
     const audio = new Audio("data:audio/mp3;base64," + base64Audio);
     audio.play();
   };
@@ -56,7 +52,6 @@ export default function TranslationPage({ socket, onSessionEnd }) {
 
       const arrayBuffer = await blob.arrayBuffer();
       socket.send(arrayBuffer);
-
       audioChunksRef.current = [];
     };
 
@@ -73,87 +68,36 @@ export default function TranslationPage({ socket, onSessionEnd }) {
     socket.send("end_session");
   };
 
-  // return (
-  //   <div style={{ padding: 40 }}>
-  //     <h2>Live Translation</h2>
+  return (
+    <div className="translation-container">
+      <div className="translation-card">
+        <h2 className="translation-title">Live Translation</h2>
 
-  //     <div style={{
-  //       height: "60vh",
-  //       overflowY: "auto",
-  //       border: "1px solid #ccc",
-  //       padding: 20
-  //     }}>
-  //       {messages.map((msg, i) => (
-  //         <div key={i}
-  //           style={{
-  //             display: "flex",
-  //             justifyContent:
-  //               msg.speaker === "patient"
-  //                 ? "flex-end"
-  //                 : "flex-start",
-  //             marginBottom: 10
-  //           }}>
-  //           <div style={{
-  //             background:
-  //               msg.speaker === "patient"
-  //                 ? "#d1f5d3"
-  //                 : "#e0e0e0",
-  //             padding: 10,
-  //             borderRadius: 10
-  //           }}>
-  //             {msg.text}
-  //           </div>
-  //         </div>
-  //       ))}
-  //     </div>
-
-  //     <button onClick={startRecording}
-  //       style={{ padding: "15px 40px", marginTop: 20 }}>
-  //       🎙 Speak
-  //     </button>
-
-  //     <button onClick={endSession}
-  //       style={{
-  //         padding: "10px 30px",
-  //         marginTop: 20,
-  //         marginLeft: 20,
-  //         backgroundColor: "#ff4d4d",
-  //         color: "white"
-  //       }}>
-  //       End Session
-  //     </button>
-  //   </div>
-  // );
-return (
-  <div className="translation-container">
-    <div className="translation-card">
-      <h2 className="translation-title">Live Translation</h2>
-
-      <div className="chat-window">
-        {messages.map((msg, i) => (
-          <div
-            key={i}
-            className={`message-row ${msg.speaker === "patient" ? "patient" : "doctor"}`}
-          >
+        <div className="chat-window">
+          {chat.map((msg, i) => (
             <div
-              className={`message-bubble ${msg.speaker === "patient" ? "patient" : "doctor"}`}
+              key={i}
+              className={`message-row ${msg.speaker === "patient" ? "patient" : "doctor"}`}
             >
-              {msg.text}
+              <div
+                className={`message-bubble ${msg.speaker === "patient" ? "patient" : "doctor"}`}
+              >
+                {msg.text}
+              </div>
             </div>
-          </div>
-        ))}
-      </div>
+          ))}
+        </div>
 
-      <div className="controls">
-        <button onClick={startRecording} className="speak-button">
-          Speak
-        </button>
+        <div className="controls">
+          <button onClick={startRecording} className="speak-button">
+            🎙 Speak
+          </button>
 
-        <button onClick={endSession} className="end-button">
-          End Session
-        </button>
+          <button onClick={endSession} className="end-button">
+            End Session
+          </button>
+        </div>
       </div>
     </div>
-  </div>
-);
+  );
 }

@@ -1,75 +1,138 @@
 import React, { useState } from "react";
 import "./SignupPage.css";
+import logo from "../assets/logo.png";
+
 function SignupPage({ onSignup, goToLogin }) {
-  const [email, setEmail] = useState("");
-  const [password, setPassword] = useState("");
+  const [form, setForm] = useState({
+    firstName: "",
+    lastName: "",
+    email: "",
+    password: "",
+    confirmPassword: "",
+    mobile: "",
+    city: ""
+  });
+
+  const [loading, setLoading] = useState(false);
+
+  const handleChange = (e) => {
+    setForm({ ...form, [e.target.name]: e.target.value });
+  };
 
   const handleSignup = async () => {
-    const res = await fetch("http://localhost:8000/auth/signup", {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-      },
-      body: JSON.stringify({ email, password }),
-    });
+    const {
+      firstName,
+      lastName,
+      email,
+      password,
+      confirmPassword,
+      mobile,
+      city
+    } = form;
 
-    const data = await res.json();
+    if (!firstName || !lastName || !email || !password || !confirmPassword || !mobile || !city) {
+      alert("Please fill all fields");
+      return;
+    }
 
-    if (res.ok) {
-      alert("Signup successful, please login");
+    if (password !== confirmPassword) {
+      alert("Passwords do not match");
+      return;
+    }
+
+    try {
+      setLoading(true);
+
+      const res = await fetch("http://localhost:8000/auth/signup", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json"
+        },
+        body: JSON.stringify(form)
+      });
+
+      const data = await res.json();
+
+      if (!res.ok) throw new Error(data.detail);
+
+      alert("Signup successful! Please login.");
       goToLogin();
-    } else {
-      alert(data.detail);
+
+    } catch (err) {
+      alert(err.message);
+    } finally {
+      setLoading(false);
     }
   };
 
-//   return (
-//     <div>
-//       <h2>Signup</h2>
+  return (
+    <div className="signup-wrapper">
+      <div className="signup-container">
 
-//       <input
-//         type="email"
-//         placeholder="Email"
-//         onChange={(e) => setEmail(e.target.value)}
-//       />
+        {/* LOGO */}
+        <img src={logo} alt="logo" className="logo" />
 
-//       <input
-//         type="password"
-//         placeholder="Password"
-//         onChange={(e) => setPassword(e.target.value)}
-//       />
+        <h2>Create Account</h2>
+        <p className="subtitle">Start your AI medical translation experience</p>
 
-//       <button onClick={handleSignup}>Signup</button>
+        {/* Name Row */}
+        <div className="row">
+          <input
+            name="firstName"
+            placeholder="First Name"
+            onChange={handleChange}
+          />
+          <input
+            name="lastName"
+            placeholder="Last Name"
+            onChange={handleChange}
+          />
+        </div>
 
-//       <p onClick={goToLogin} style={{ cursor: "pointer" }}>
-//         Already have an account? Login
-//       </p>
-//     </div>
-//   );
+        <input
+          name="email"
+          type="email"
+          placeholder="Email"
+          onChange={handleChange}
+        />
 
-return (
-  <div className="signup-container">
-    <h2>Signup</h2>
+        <input
+          name="mobile"
+          placeholder="Mobile Number"
+          onChange={handleChange}
+        />
 
-    <input
-      type="email"
-      placeholder="Email"
-      onChange={(e) => setEmail(e.target.value)}
-    />
+        <input
+          name="city"
+          placeholder="City"
+          onChange={handleChange}
+        />
 
-    <input
-      type="password"
-      placeholder="Password"
-      onChange={(e) => setPassword(e.target.value)}
-    />
+        <input
+          name="password"
+          type="password"
+          placeholder="Password"
+          onChange={handleChange}
+        />
 
-    <button onClick={handleSignup}>Signup</button>
+        <input
+          name="confirmPassword"
+          type="password"
+          placeholder="Confirm Password"
+          onChange={handleChange}
+        />
 
-    <p className="signup-link-text" onClick={goToLogin}>
-      Already have an account? Login
-    </p>
-  </div>
-);
+        <button onClick={handleSignup} disabled={loading}>
+          {loading ? "Creating account..." : "Signup"}
+        </button>
+
+        <p className="link-text" onClick={goToLogin}>
+          Already have an account? Login
+        </p>
+
+      </div>
+    </div>
+  );
 }
 
 export default SignupPage;

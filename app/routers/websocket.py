@@ -1,6 +1,10 @@
 from fastapi import WebSocket, APIRouter, WebSocketDisconnect
 from openai import OpenAI
-from app.config import OPENAI_API_KEY
+from jose import jwt
+import datetime
+
+from app.config import OPENAI_API_KEY, SECRET_KEY
+from app.db import users_collection
 from app.services.ai import (
     transcribe_audio,
     detect_language,
@@ -12,10 +16,30 @@ router = APIRouter()
 client = OpenAI(api_key=OPENAI_API_KEY)
 
 
+# ==========================================
+# 🔐 JWT HELPER
+# ==========================================
+def get_email_from_token(token):
+    try:
+        payload = jwt.decode(token, SECRET_KEY, algorithms=["HS256"])
+        return payload.get("sub")
+    except:
+        return None
+
+
+# ==========================================
+# 🔌 WEBSOCKET
+# ==========================================
 @router.websocket("/ws")
 async def websocket_endpoint(websocket: WebSocket):
     await websocket.accept()
     print("WebSocket connected")
+
+    # 🔐 extract user
+    token = websocket.query_params.get("token")
+    user_email = get_email_from_token(token)
+
+    print("Connected user:", user_email)
 
     patient_language = None
     transcript_log = []
@@ -84,6 +108,18 @@ async def websocket_endpoint(websocket: WebSocket):
             })
             return await safe_close(websocket)
 
+        # ✅ STORE CONSENT IN DB
+        if user_email:
+            users_collection.update_one(
+                {"email": user_email},
+                {
+                    "$set": {
+                        "consent_given": True,
+                        "consent_timestamp": datetime.datetime.utcnow()
+                    }
+                }
+            )
+
         await websocket.send_json({
             "type": "status",
             "text": "Consent granted"
@@ -96,7 +132,7 @@ async def websocket_endpoint(websocket: WebSocket):
         while True:
             message = await websocket.receive()
 
-            # ✅ HANDLE DISCONNECT
+            # 🔴 HANDLE DISCONNECT
             if message.get("type") == "websocket.disconnect":
                 print("Client disconnected")
                 break
@@ -135,7 +171,7 @@ async def websocket_endpoint(websocket: WebSocket):
                 continue
 
             # --------------------------------------
-            # SAFE AUDIO HANDLING
+            # SAFE AUDIO
             # --------------------------------------
             if "bytes" not in message or message["bytes"] is None:
                 print("Invalid message:", message)
@@ -204,7 +240,9 @@ async def websocket_endpoint(websocket: WebSocket):
         await safe_close(websocket)
 
 
-# ✅ SAFE CLOSE
+# ==========================================
+# 🔒 SAFE CLOSE
+# ==========================================
 async def safe_close(websocket: WebSocket):
     try:
         await websocket.close()

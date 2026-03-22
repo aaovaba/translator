@@ -1,5 +1,6 @@
 import React, { useState } from "react";
 import "./LoginPage.css";
+import logo from "../assets/logo.png"; // 👈 add your logo here
 
 function LoginPage({ onLogin, goToSignup }) {
   const [email, setEmail] = useState("");
@@ -20,22 +21,14 @@ function LoginPage({ onLogin, goToSignup }) {
         headers: {
           "Content-Type": "application/json",
         },
-        body: JSON.stringify({
-          email,
-          password,
-        }),
+        body: JSON.stringify({ email, password }),
       });
 
       const data = await res.json();
 
-      if (!res.ok) {
-        throw new Error(data.detail || "Login failed");
-      }
+      if (!res.ok) throw new Error(data.detail);
 
-      // ✅ store token
       localStorage.setItem("token", data.token);
-
-      // ✅ move to next page
       onLogin();
 
     } catch (err) {
@@ -46,30 +39,37 @@ function LoginPage({ onLogin, goToSignup }) {
   };
 
   return (
-    <div className="login-container">
-      <h2>Login</h2>
+    <div className="login-wrapper">
+      <div className="login-container">
 
-      <input
-        type="email"
-        placeholder="Enter email"
-        value={email}
-        onChange={(e) => setEmail(e.target.value)}
-      />
+        {/* 🔥 LOGO */}
+        <img src={logo} alt="Company Logo" className="logo" />
 
-      <input
-        type="password"
-        placeholder="Enter password"
-        value={password}
-        onChange={(e) => setPassword(e.target.value)}
-      />
+        <h2>Medical Translator</h2>
+        <p className="subtitle">AI-powered doctor-patient communication</p>
 
-      <button onClick={handleLogin} disabled={loading}>
-        {loading ? "Logging in..." : "Login"}
-      </button>
+        <input
+          type="email"
+          placeholder="Enter email"
+          value={email}
+          onChange={(e) => setEmail(e.target.value)}
+        />
 
-      <p className="link-text" onClick={goToSignup}>
-        New user? Signup
-      </p>
+        <input
+          type="password"
+          placeholder="Enter password"
+          value={password}
+          onChange={(e) => setPassword(e.target.value)}
+        />
+
+        <button onClick={handleLogin} disabled={loading}>
+          {loading ? "Logging in..." : "Login"}
+        </button>
+
+        <p className="link-text" onClick={goToSignup}>
+          New user? Signup
+        </p>
+      </div>
     </div>
   );
 }

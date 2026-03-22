@@ -20,52 +20,111 @@ function SignupPage({ onSignup, goToLogin }) {
     setForm({ ...form, [e.target.name]: e.target.value });
   };
 
+  // const handleSignup = async () => {
+  //   const {
+  //     firstName,
+  //     lastName,
+  //     email,
+  //     password,
+  //     confirmPassword,
+  //     mobile,
+  //     city
+  //   } = form;
+
+  //   if (!firstName || !lastName || !email || !password || !confirmPassword || !mobile || !city) {
+  //     alert("Please fill all fields");
+  //     return;
+  //   }
+
+  //   if (password !== confirmPassword) {
+  //     alert("Passwords do not match");
+  //     return;
+  //   }
+
+  //   try {
+  //     setLoading(true);
+
+  //     const res = await fetch(`${BASE_URL}/auth/signup`, {
+  //       method: "POST",
+  //       headers: {
+  //         "Content-Type": "application/json"
+  //       },
+  //       body: JSON.stringify(form)
+  //     });
+
+  //     const data = await res.json();
+
+  //     if (!res.ok) throw new Error(data.detail);
+
+  //     alert("Signup successful! Please login.");
+  //     goToLogin();
+
+  //   } catch (err) {
+  //     alert(err.message);
+  //   } finally {
+  //     setLoading(false);
+  //   }
+  // };
   const handleSignup = async () => {
-    const {
-      firstName,
-      lastName,
-      email,
-      password,
-      confirmPassword,
-      mobile,
-      city
-    } = form;
+  const {
+    firstName,
+    lastName,
+    email,
+    password,
+    confirmPassword,
+    mobile,
+    city
+  } = form;
 
-    if (!firstName || !lastName || !email || !password || !confirmPassword || !mobile || !city) {
-      alert("Please fill all fields");
-      return;
-    }
+  if (!firstName || !lastName || !email || !password || !confirmPassword || !mobile || !city) {
+    alert("Please fill all fields");
+    return;
+  }
 
-    if (password !== confirmPassword) {
-      alert("Passwords do not match");
-      return;
-    }
+  if (password !== confirmPassword) {
+    alert("Passwords do not match");
+    return;
+  }
+
+  try {
+    setLoading(true);
+
+    const res = await fetch(`${BASE_URL}/auth/signup`, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json"
+      },
+      body: JSON.stringify({
+        firstName,
+        lastName,
+        email,
+        password,
+        mobile,
+        city
+      }) // ✅ removed confirmPassword
+    });
+
+    let data;
 
     try {
-      setLoading(true);
-
-      const res = await fetch(`${BASE_URL}/auth/signup`, {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json"
-        },
-        body: JSON.stringify(form)
-      });
-
-      const data = await res.json();
-
-      if (!res.ok) throw new Error(data.detail);
-
-      alert("Signup successful! Please login.");
-      goToLogin();
-
-    } catch (err) {
-      alert(err.message);
-    } finally {
-      setLoading(false);
+      data = await res.json(); // safe parse
+    } catch {
+      throw new Error("Server error - no response");
     }
-  };
 
+    if (!res.ok) {
+      throw new Error(data.detail || "Signup failed");
+    }
+
+    alert("Signup successful! Please login.");
+    goToLogin();
+
+  } catch (err) {
+    alert(err.message);
+  } finally {
+    setLoading(false);
+  }
+};
   return (
     <div className="signup-wrapper">
       <div className="signup-container">

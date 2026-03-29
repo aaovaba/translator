@@ -3,6 +3,8 @@ from app.routers.websocket import router
 from app.routers import auth
 from fastapi.middleware.cors import CORSMiddleware
 from app.routers import session
+from app.routers import admin 
+
 
 app = FastAPI()
 app.add_middleware(
@@ -18,6 +20,8 @@ app.add_middleware(
 app.include_router(router)
 app.include_router(auth.router, prefix="/auth")
 app.include_router(session.router)
+app.include_router(admin.router)
+
 
 @app.get("/")
 def health():

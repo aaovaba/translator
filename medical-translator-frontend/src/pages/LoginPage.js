@@ -6,7 +6,7 @@ function LoginPage({ onLogin, goToSignup }) {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [loading, setLoading] = useState(false);
-  const BASE_URL = process.env.REACT_APP_API_URL;
+  const BASE_URL = process.env.REACT_APP_API_URL || "http://localhost:8000"; // fallback for local dev
 
   const handleLogin = async () => {
     if (!email || !password) {
@@ -17,26 +17,23 @@ function LoginPage({ onLogin, goToSignup }) {
     try {
       setLoading(true);
 
-      // const res = await fetch("http://localhost:8000/auth/login", {
-      //   method: "POST",
-      //   headers: {
-      //     "Content-Type": "application/json",
-      //   },
-      //   body: JSON.stringify({ email, password }),
-      // });
       const res = await fetch(`${BASE_URL}/auth/login`, {
-          method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-          },
-          body: JSON.stringify({ email, password }),
-        });
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({ email, password }),
+      });
 
       const data = await res.json();
 
       if (!res.ok) throw new Error(data.detail);
 
+      // ✅ SAVE BOTH TOKEN AND ROLE
       localStorage.setItem("token", data.token);
+      localStorage.setItem("role", data.user?.role || "user"); 
+
+      // Trigger the page change in App.js
       onLogin();
 
     } catch (err) {
